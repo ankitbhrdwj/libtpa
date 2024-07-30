@@ -7,3 +7,5 @@ version.h
 build-info.h
 core
 build
+dpdk
+third
