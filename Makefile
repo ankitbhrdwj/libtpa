@@ -26,6 +26,7 @@ tpad: tools lib
 tools app: static
 
 dpdk:
+	$(Q)bash ./buildtools/build-rdma-core.sh
 	$(Q)bash ./buildtools/build-dpdk.sh
 
 $(LIBTPA_SO): src lib

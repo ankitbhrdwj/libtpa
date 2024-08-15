@@ -23,12 +23,13 @@ fn rerun_if_changed(root_dir: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn linker_arguments(_root_dir: &Path) -> anyhow::Result<()> {
+fn linker_arguments(root_dir: &Path) -> anyhow::Result<()> {
     let mut static_libs = vec![];
     let mut dyn_libs = vec![];
 
     // Add search paths for libraries ibverbs, mlx4, mlx5
-    let mut search_paths = vec!["/usr/lib/x86_64-linux-gnu/".into()];
+    let rdma_core_path = root_dir.join("build/rdma-core/build/lib");
+    let mut search_paths = vec![rdma_core_path, "/usr/lib/x86_64-linux-gnu/".into()];
 
     let output = pkg_config::Config::new()
         .atleast_version("v1.0")
@@ -86,7 +87,7 @@ fn generate_bindings(_root_dir: &Path) -> anyhow::Result<()> {
 }
 
 fn main() -> anyhow::Result<()> {
-    let root_dir = canonicalize("../../").context("failed to canonicalize root dir")?;
+    let root_dir = canonicalize("../").context("failed to canonicalize root dir")?;
     rerun_if_changed(&root_dir)?;
     #[cfg(feature = "standalone")]
     linker_arguments(&root_dir)?;

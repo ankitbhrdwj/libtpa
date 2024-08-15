@@ -56,10 +56,15 @@ CFLAGS  += -fsanitize=address
 LDFLAGS += -fsanitize=address
 endif
 
+EXTRA_CFLAGS+=-I$(BUILD_ROOT)/rdma-core/build/include
+EXTRA_LDFLAGS+=-L$(BUILD_ROOT)/rdma-core/build/lib
+PKG_CONFIG_PATH=$(BUILD_ROOT)/rdma-core/build/lib/pkgconfig
+
 export EXTRA_CFLAGS
 export EXTRA_LDFLAGS
 export CFLAGS
 export LDFLAGS
+export PKG_CONFIG_PATH
 
 ifneq ($(filter v20.11% v22.11%, $(DPDK_VERSION)),)
 ifeq ($(ARCH), x86_64)
