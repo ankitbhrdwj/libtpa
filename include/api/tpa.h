@@ -35,6 +35,7 @@ struct tpa_iovec {
 	uint64_t iov_phys;
 	uint32_t iov_len;
 	uint32_t iov_reserved;
+	uint8_t  dscp;
 	void    *iov_param;
 	union {
 		void (*iov_read_done)(void *iov_base, void *iov_param);
