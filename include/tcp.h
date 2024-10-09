@@ -134,6 +134,12 @@ static inline uint32_t tcp_ts_to_us(uint32_t ts)
 #define TCP_OPT_SACK_SPACE(n)	(4 + 8 * (n))
 #define TCP_OPT_SACK_BIT	(1u << TCP_OPT_SACK_KIND)
 
+/* custom option with 32 bit value */
+#define TCP_OPT_CUSTOM_KIND 7
+#define TCP_OPT_CUSTOM_LEN 6
+#define TCP_OPT_CUSTOM_SPACE 8
+#define TCP_OPT_CUSTOM_BIT (1u << TCP_OPT_CUSTOM_KIND)
+
 struct tcp_opt {
 	uint8_t type;
 	uint8_t len;
@@ -167,6 +173,9 @@ struct tcp_opts {
 	uint8_t has_sack_perm;
 	uint8_t nr_sack;
 	struct tcp_sack_block sack_blocks[TCP_MAX_NR_SACK_BLOCK];
+
+	uint8_t has_seq;
+	uint32_t optional_seq;
 };
 
 static inline void fill_opt_ts(uint8_t *addr, uint32_t val, uint32_t ecr)
@@ -184,9 +193,24 @@ static inline void fill_opt_ts(uint8_t *addr, uint32_t val, uint32_t ecr)
 	opt->u32[1] = htonl(ecr);
 }
 
+static inline void fill_opt_seq(uint8_t *addr, uint32_t seq)
+{
+	struct tcp_opt *opt;
+
+	/* recommended per RFC 1323 Appendix A */
+	addr[0] = TCP_OPT_NOP_KIND;
+	addr[1] = TCP_OPT_NOP_KIND;
+
+	opt = (struct tcp_opt *)(addr + 2);
+	opt->type = TCP_OPT_CUSTOM_KIND;
+	opt->len = TCP_OPT_CUSTOM_LEN;
+	opt->u32[0] = htonl(seq);
+}
+
 struct tcp_cfg {
 	uint32_t enable_tso;
 	uint32_t enable_ts;
+	uint32_t enable_seq;
 	uint32_t enable_ws;
 	uint32_t enable_sack;
 	uint32_t enable_rx_merge;

@@ -27,6 +27,7 @@ static struct sock_table listen_sock_table;
 struct tcp_cfg tcp_cfg = {
 	.enable_tso		= 1,
 	.enable_ts		= 1,
+	.enable_seq		= 0,
 	.enable_ws		= 1,
 	.enable_sack		= 1,
 	.enable_rx_merge	= 1,
@@ -99,6 +100,10 @@ static struct cfg_spec tcp_cfg_specs[] = {
 		.name   = "tcp.opt_ts",
 		.type   = CFG_TYPE_UINT,
 		.data   = &tcp_cfg.enable_ts,
+	}, {
+		.name   = "tcp.opt_seq",
+		.type   = CFG_TYPE_UINT,
+		.data   = &tcp_cfg.enable_seq,
 	}, {
 		.name   = "tcp.opt_ws",
 		.type   = CFG_TYPE_UINT,
@@ -367,6 +372,7 @@ static int tsock_init(struct tcp_sock *tsock, int sid, const struct tpa_sock_opt
 
 	tsock->tso_enabled  = tcp_cfg.enable_tso;
 	tsock->ts_enabled   = tcp_cfg.enable_ts;
+	tsock->seq_enabled  = tcp_cfg.enable_seq;
 	tsock->ws_enabled   = tcp_cfg.enable_ws;
 	tsock->sack_enabled = tcp_cfg.enable_sack;
 
@@ -704,12 +710,6 @@ err:
 	return -1;
 }
 
-static void update_dscp(struct tcp_sock *tsock, uint8_t dscp)
-{
-	tsock->net_hdr.ip4.type_of_service &= ~RTE_IPV4_HDR_DSCP_MASK;		   // Clear the DSCP bits
-	tsock->net_hdr.ip4.type_of_service |= (dscp & RTE_IPV4_HDR_DSCP_MASK); // Set the new DSCP bits
-}
-
 int tpa_connect_to(const char *server, uint16_t port, const struct tpa_sock_opts *opts)
 {
 	struct tcp_sock *tsock;
@@ -924,7 +924,6 @@ ssize_t tpa_zwritev(int sid, const struct tpa_iovec *iov, int nr_iov)
 		return ret;
 	}
 
-	update_dscp(tsock, iov->dscp);
 	tsock_update_last_ts(tsock, LAST_TS_WRITE);
 	ret = tsock_zwritev(tsock, iov, nr_iov);
 	if (unlikely(ret < 0 && errno == EAGAIN))

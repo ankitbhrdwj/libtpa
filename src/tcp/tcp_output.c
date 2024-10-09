@@ -28,6 +28,15 @@ void calc_csum(struct eth_ip_hdr *net_hdr, struct rte_tcp_hdr *tcp)
 	}
 }
 
+static void update_dscp(struct eth_ip_hdr *net_hdr, uint8_t dscp)
+{
+	if (likely((net_hdr->eth.ether_type) == RTE_ETHER_TYPE_IPV4))
+	{
+		net_hdr->ip4.type_of_service &= ~RTE_IPV4_HDR_DSCP_MASK;		 // Clear the DSCP bits
+		net_hdr->ip4.type_of_service |= (dscp & RTE_IPV4_HDR_DSCP_MASK); // Set the new DSCP bits
+	}
+}
+
 static inline void mbuf_set_offload(struct packet *pkt, struct eth_ip_hdr *net_hdr,
 				    struct rte_tcp_hdr *tcp, int is_ipv6,
 				    uint16_t tcp_hdr_len, uint16_t payload_len,
@@ -77,6 +86,12 @@ static inline int calc_tcp_opt_len(struct tcp_sock *tsock, uint16_t flags,
 {
 	uint32_t opts = 0;
 	uint16_t len = 0;
+
+	if ((tsock->state == TCP_STATE_ESTABLISHED) & tsock->seq_enabled)
+	{
+		len += TCP_OPT_CUSTOM_SPACE;
+		opts |= TCP_OPT_CUSTOM_BIT;
+	}
 
 	if (tsock->state == TCP_STATE_SYN_SENT ? tsock->ts_enabled : tsock->ts_ok) {
 		len += TCP_OPT_TS_SPACE;
@@ -168,8 +183,15 @@ static __rte_noinline void fill_uncommon_opts(const struct tcp_sock *tsock,
 	}
 }
 
-static inline void fill_opts(const struct tcp_sock *tsock, uint32_t opts, uint8_t *addr)
+static inline void fill_opts(const struct tcp_sock *tsock, uint32_t opts, uint32_t opt_seq, uint8_t *addr)
 {
+	// If this is set, set it as first option.
+	if (likely(opts & TCP_OPT_CUSTOM_BIT))
+	{
+		fill_opt_seq(addr, opt_seq);
+		addr += TCP_OPT_CUSTOM_SPACE;
+	}
+
 	if (likely(opts & TCP_OPT_TS_BIT)) {
 		fill_opt_ts(addr, us_to_tcp_ts(tsock->worker->ts_us), 0);
 		addr += TCP_OPT_TS_SPACE;
@@ -180,7 +202,7 @@ static inline void fill_opts(const struct tcp_sock *tsock, uint32_t opts, uint8_
 }
 
 static inline int prepend_tcp_hdr(struct tcp_sock *tsock, struct packet *pkt,
-				  uint32_t seq, uint8_t tcp_flags)
+				  uint32_t seq, uint8_t opt_dscp, uint32_t opt_seq, uint8_t tcp_flags)
 {
 	struct rte_mbuf *m = &pkt->mbuf;
 	uint16_t payload_len = m->pkt_len;
@@ -200,7 +222,7 @@ static inline int prepend_tcp_hdr(struct tcp_sock *tsock, struct packet *pkt,
 		return -ERR_PKT_PREPEND_HDR;
 	tcp = (struct rte_tcp_hdr *)((char *)hdr + tsock->net_hdr_len);
 
-	fill_opts(tsock, opts, (uint8_t *)(tcp + 1));
+	fill_opts(tsock, opts, opt_seq, (uint8_t *)(tcp + 1));
 
 	debug_assert(tsock->rcv_wnd < TCP_WINDOW_MAX);
 	if (tsock->rcv_wnd >= TCP_WINDOW_MAX)
@@ -236,6 +258,7 @@ static inline int prepend_tcp_hdr(struct tcp_sock *tsock, struct packet *pkt,
 	if (opts & TCP_OPT_SACK_BIT)
 		snd_mss -= TCP_OPT_SACK_SPACE(tsock->nr_sack_block);
 
+	update_dscp(hdr, opt_dscp);
 	mbuf_set_offload(pkt, hdr, tcp, tsock->is_ipv6, tcp_hdr_len, payload_len,
 			 tsock->packet_id++, snd_mss);
 
@@ -288,7 +311,7 @@ int xmit_flag_packet_with_seq(struct tpa_worker *worker, struct tcp_sock *tsock,
 	}
 
 	tcp_flags = tsock_flags_to_tcp_flags(tsock->flags);
-	err = prepend_tcp_hdr(tsock, pkt, seq, tcp_flags);
+	err = prepend_tcp_hdr(tsock, pkt, seq, 0, 0, tcp_flags);
 	if (err == 0) {
 		if (tsock->flags & TSOCK_FLAG_MISSING_ARP) {
 			tsock->flags &= ~TSOCK_FLAG_MISSING_ARP;
@@ -515,6 +538,8 @@ static inline int xmit_one_packet(struct tpa_worker *worker, struct tcp_sock *ts
 	int budget;
 	uint32_t size = 0;
 	uint32_t off;
+	uint8_t opt_dscp = 0;
+	uint32_t opt_seq = 0;
 	int err = 0;
 	int len;
 
@@ -554,6 +579,12 @@ static inline int xmit_one_packet(struct tpa_worker *worker, struct tcp_sock *ts
 
 		off = ctx->seq - desc->seq;
 		len = RTE_MIN(desc->len - off, budget);
+
+		// If we have not set the opt_seq, set it.
+		if (unlikely(opt_seq == 0)) {
+			opt_dscp = desc->dscp_bits;
+			opt_seq = desc->opt_seq + off;
+		}
 
 		/* make sure we do not go beyond snd_nxt for retrans */
 		if (seq_gt((ctx->seq + len), ctx->seq_max)) {
@@ -601,7 +632,7 @@ static inline int xmit_one_packet(struct tpa_worker *worker, struct tcp_sock *ts
 	if (unlikely(size == 0))
 		goto error;
 
-	err = prepend_tcp_hdr(tsock, hdr_pkt, ctx->seq - size, TCP_FLAG_ACK);
+	err = prepend_tcp_hdr(tsock, hdr_pkt, ctx->seq - size, opt_dscp, opt_seq, TCP_FLAG_ACK);
 	if (unlikely(err))
 		goto error;
 
@@ -996,6 +1027,8 @@ ssize_t tsock_zwritev(struct tcp_sock *tsock, const struct tpa_iovec *iov, int n
 		desc->param      = iov[i].iov_param;
 		desc->flags      = 0;
 		desc->seq        = tsock->data_seq_nxt + ctx.size;
+		desc->dscp_bits  = iov[i].dscp_bits;
+		desc->opt_seq    = iov[i].optional_seq;
 
 		txq->descs[(txq->write + ctx.nr_desc) & txq->mask] = desc;
 		ctx.nr_desc += 1;
