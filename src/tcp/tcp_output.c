@@ -539,7 +539,8 @@ static inline int xmit_one_packet(struct tpa_worker *worker, struct tcp_sock *ts
 	uint32_t size = 0;
 	uint32_t off;
 	uint8_t opt_dscp = 0;
-	int opt_seq = -1;
+	uint32_t opt_seq = 0;
+	bool is_opt_set = false;
 	int err = 0;
 	int len;
 
@@ -581,9 +582,11 @@ static inline int xmit_one_packet(struct tpa_worker *worker, struct tcp_sock *ts
 		len = RTE_MIN(desc->len - off, budget);
 
 		// If we have not set the opt_seq, set it.
-		if (unlikely(opt_seq == -1)) {
+		if (unlikely(is_opt_set == false))
+		{
 			opt_dscp = desc->dscp_bits;
 			opt_seq = desc->opt_seq + off;
+			is_opt_set = true;
 		}
 
 		/* make sure we do not go beyond snd_nxt for retrans */
@@ -632,7 +635,7 @@ static inline int xmit_one_packet(struct tpa_worker *worker, struct tcp_sock *ts
 	if (unlikely(size == 0))
 		goto error;
 
-	err = prepend_tcp_hdr(tsock, hdr_pkt, ctx->seq - size, opt_dscp, (uint32_t)opt_seq, TCP_FLAG_ACK);
+	err = prepend_tcp_hdr(tsock, hdr_pkt, ctx->seq - size, opt_dscp, opt_seq, TCP_FLAG_ACK);
 	if (unlikely(err))
 		goto error;
 
