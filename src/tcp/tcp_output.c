@@ -907,6 +907,8 @@ static int write_one_iov(struct tcp_sock *tsock, const struct tpa_iovec *iov,
 		desc->param      = NULL;
 		desc->flags      = flags;
 		desc->seq        = tsock->data_seq_nxt + ctx->size;
+		desc->dscp_bits  = iov->dscp_bits;
+		desc->opt_seq    = iov->optional_seq + off;
 
 		off += len;
 		ctx->size += len;
