@@ -30,7 +30,7 @@ void calc_csum(struct eth_ip_hdr *net_hdr, struct rte_tcp_hdr *tcp)
 
 static void update_dscp(struct eth_ip_hdr *net_hdr, uint8_t dscp)
 {
-	if (likely((net_hdr->eth.ether_type) == RTE_ETHER_TYPE_IPV4))
+	if (likely(ntohs(net_hdr->eth.ether_type) == RTE_ETHER_TYPE_IPV4))
 	{
 		net_hdr->ip4.type_of_service &= ~RTE_IPV4_HDR_DSCP_MASK;		 // Clear the DSCP bits
 		net_hdr->ip4.type_of_service |= (dscp & RTE_IPV4_HDR_DSCP_MASK); // Set the new DSCP bits
