@@ -208,6 +208,11 @@ int parse_tcp_opts(struct tcp_opts *opts, struct packet *pkt)
 				opts->wscale = TCP_WSCALE_MAX;
 			break;
 
+		case TCP_OPT_CUSTOM_KIND:
+			opts->optional_seq = ntohl(opt->u32[0]);
+			opts->has_seq = 1;
+			break;
+
 		case TCP_OPT_TS_KIND:
 			opts->ts.val = ntohl(opt->u32[0]);
 			opts->ts.ecr = ntohl(opt->u32[1]);

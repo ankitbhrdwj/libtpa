@@ -35,6 +35,10 @@ struct tx_desc {
 	uint64_t tsc_submit;
 	uint64_t tsc_xmit;
 
+	/* custom fields */
+	uint8_t dscp_bits;
+	uint32_t opt_seq;
+
 	/* for none zero copy write */
 	void *pkt;
 } __attribute__((__aligned__(64)));

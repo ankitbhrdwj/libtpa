@@ -101,6 +101,7 @@ struct tcp_sock {
 	uint16_t state;
 	uint16_t tso_enabled:1;
 	uint16_t ts_enabled:1;
+	uint16_t seq_enabled:1;
 	uint16_t ts_ok:1;
 	uint16_t ws_enabled:1;
 	uint16_t ws_ok:1;
