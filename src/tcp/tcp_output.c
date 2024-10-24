@@ -562,6 +562,7 @@ static inline int xmit_one_packet(struct tpa_worker *worker, struct tcp_sock *ts
 
 	tail = hdr_pkt;
 	budget = RTE_MIN(ctx->budget, tsock_snd_mss(tsock));
+	uint8_t is_tagged = desc->dscp_bits & 0x80;
 
 	while (budget > 0) {
 		if (unlikely(seq_lt(ctx->seq, tsock->snd_nxt))) {
@@ -582,7 +583,7 @@ static inline int xmit_one_packet(struct tpa_worker *worker, struct tcp_sock *ts
 		len = RTE_MIN(desc->len - off, budget);
 
 		// If we have not set the opt_seq, set it.
-		if (unlikely(is_opt_set == false))
+		if (is_opt_set == false)
 		{
 			opt_dscp = desc->dscp_bits;
 			opt_seq = desc->opt_seq + off;
@@ -629,6 +630,9 @@ static inline int xmit_one_packet(struct tpa_worker *worker, struct tcp_sock *ts
 			break;
 
 		if (unlikely(!desc))
+			break;
+
+		if (unlikely(is_tagged != (desc->dscp_bits & 0x80)))
 			break;
 	}
 
