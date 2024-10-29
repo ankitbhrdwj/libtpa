@@ -1,4 +1,5 @@
 *.swp
+.vscode/
 GPATH
 GRTAGS
 GTAGS

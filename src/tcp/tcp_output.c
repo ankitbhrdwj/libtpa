@@ -464,13 +464,13 @@ void flush_tcp_packet(struct packet *pkt, int err)
 uint32_t isn_gen(struct tpa_ip *local_ip, struct tpa_ip *remote_ip,
 		 uint16_t local_port, uint16_t remote_port)
 {
-	uint32_t seq;
+	//uint32_t seq;
 
-	/* we ignore local ip here as it does not change */
-	seq = rte_crc32_u64(remote_ip->u64[0] | (uint64_t)local_port,
-			    remote_ip->u64[1] | (uint64_t)remote_port);
+	//seq = rte_crc32_u64(remote_ip->u64[0] | (uint64_t)local_port,
+	//		    remote_ip->u64[1] | (uint64_t)remote_port);
 
-	return seq + (rte_rdtsc() >> 10);
+	//return seq + (rte_rdtsc() >> 10);
+	return 0;
 }
 
 int tcp_connect(struct tcp_sock *tsock)

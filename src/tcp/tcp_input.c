@@ -662,6 +662,7 @@ static inline int tcp_rcv_data(struct tpa_worker *worker, struct tcp_sock *tsock
 	}
 
 ooo_rcv:
+  	print_sock_seq(pkt, tsock, 9);
 	tsock_reset_quickack(tsock);
 	tsock_set_ack_flag(tsock, TSOCK_FLAG_ACK_NOW);
 
@@ -1226,10 +1227,10 @@ static int process_incoming_seq(struct tpa_worker *worker, struct tcp_sock *tsoc
 		 * - RST pkt: per RFC 7323 5.2, RST seg must not be subjected
 		 *   to the PAWS check
 		 */
-		if (seq_lt(opts->ts.val, tsock->ts_recent) &&
-		    (now_in_sec(worker) - tsock->ts_recent_in_sec) < TCP_PAWS_IDLE_MAX &&
-		    !has_flag_rst(pkt))
-			return -ERR_TCP_INVALID_TS;
+		// if (seq_lt(opts->ts.val, tsock->ts_recent) && !has_flag_rst(pkt))
+		//     // (now_in_sec(worker) - tsock->ts_recent_in_sec) < TCP_PAWS_IDLE_MAX &&
+		//     // !has_flag_rst(pkt))
+		// 	return -ERR_TCP_INVALID_TS;
 
 		if (seq_le(TCP_SEG(pkt)->seq, tsock->last_ack_sent) && !has_flag_rst(pkt))
 			update_ts_recent(worker, tsock, pkt);
@@ -1668,7 +1669,6 @@ static inline void tcp_rcv_process(struct tpa_worker *worker, struct tcp_sock *t
 				   struct packet *pkt)
 {
 	int err;
-
 	vstats_add(&tsock->rx_merge_size, pkt->nr_read_seg);
 	/* here we do count only when merge happened; therefore > 1 here */
 	if (pkt->nr_read_seg > 1)
@@ -1677,6 +1677,7 @@ static inline void tcp_rcv_process(struct tpa_worker *worker, struct tcp_sock *t
 	/* done with MERGE stage; switch to READ stage */
 	pkt->to_read = pkt;
 	err = tcp_rcv_pkt(worker, tsock, pkt);
+  // print_sock_seq(pkt, tsock, err);
 
 	/* free pkt carries no data as well (TCP_SEG.len == 0) */
 	if (unlikely(err || TCP_SEG(pkt)->len == 0))
@@ -1713,6 +1714,7 @@ static inline void tcp_merge(struct tpa_worker *worker, struct tcp_sock *tsock,
 
 	head = tsock->rx_merge_head;
 	if (head) {
+    	// print_sock_seq(head, tsock, 0);
 		if (TCP_SEG(head)->seq == tsock->rcv_nxt && tcp_can_merge(head, pkt)) {
 			packet_chain(head, pkt);
 
@@ -1751,12 +1753,14 @@ uint32_t tcp_input(struct tpa_worker *worker, uint16_t port_id)
 
 		err = parse_tcp_packet(pkt);
 		if (unlikely(err)) {
+			fprintf(stderr, "parse_tcp_packet failed\n");
 			free_err_pkt(worker, NULL, pkt, err);
 			continue;
 		}
 
 		err = tsock_lookup(worker, worker->id, pkt, &tsock);
 		if (unlikely(err)) {
+			fprintf(stderr, "tsock_lookup failed %d\n", err);
 			free_err_pkt(worker, NULL, pkt, err);
 			continue;
 		}

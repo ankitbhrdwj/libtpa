@@ -249,6 +249,27 @@ static inline void tsock_reset_quickack(struct tcp_sock *tsock)
 	TSOCK_STATS_INC(tsock, WARN_QUICKACK_RESET);
 }
 
+inline void print_sock_seq(const struct packet * pkt, const struct tcp_sock * tsock, int err) {
+	  // return 0;
+
+    // Convert IP from network byte order to host byte order for proper display
+    uint32_t local_ip4 = ntohl(tsock->local_ip.u32[3]);
+    uint32_t remote_ip4 = ntohl(tsock->remote_ip.u32[3]);
+
+    // Print IPs in dotted decimal format
+    fprintf(stderr, "%u.%u.%u.%u: %u <-> %u.%u.%u.%u:%u, pkt seq: %u, rcv_nxt: %u, l5len: %u, err %d\n", 
+            (local_ip4 >> 24) & 0xFF, 
+            (local_ip4 >> 16) & 0xFF, 
+            (local_ip4 >> 8) & 0xFF, 
+            local_ip4 & 0xFF,
+            ntohs(tsock->local_port), 
+            (remote_ip4 >> 24) & 0xFF, 
+            (remote_ip4 >> 16) & 0xFF, 
+            (remote_ip4 >> 8) & 0xFF, 
+            remote_ip4 & 0xFF,
+            ntohs(tsock->remote_port), TCP_SEG(pkt)->seq, tsock->rcv_nxt, pkt->l5_len, err);
+}
+
 static inline void tsock_rearm_timer_rto(struct tcp_sock *tsock, uint64_t now)
 {
 	timer_start(&tsock->timer_rto, now, tsock->rto << tsock->rto_shift);
@@ -434,6 +455,7 @@ static inline int tsock_lookup(struct tpa_worker *worker, int wid,
 
 	sid = parse_flow_mark(wid, pkt);
 	if (likely(sid >= 0)) {
+        // fprintf(stderr, "SID >= 0\n");
 		if (unlikely(sid >= tcp_cfg.nr_max_sock))
 			return -ERR_NO_SOCK;
 
@@ -442,11 +464,12 @@ static inline int tsock_lookup(struct tpa_worker *worker, int wid,
 			return -WARN_STALE_PKT_TUPLE_MISMATCH;
 
 		if (unlikely(tsock->state == TCP_STATE_LISTEN)) {
-			struct tcp_sock *child;
+			struct tcp_sock *child = 0;
 
 			if (tsock_lookup_slowpath(worker, pkt, &child) == 0) {
 				assert(child->state != TCP_STATE_LISTEN);
 				tsock = child;
+                // fprintf(stderr, "tsock set to %p\n", child);
 			}
 		}
 
@@ -456,9 +479,12 @@ static inline int tsock_lookup(struct tpa_worker *worker, int wid,
 
 	err = sid;
 	if (err == -WARN_MISSING_FLOW_MARK) {
+		fprintf(stderr, "WARN_MISSING_FLOW_MARK\n");
 		err = tsock_lookup_slowpath(worker, pkt, tsock_ptr);
-		if (err == -ERR_NO_SOCK)
+        if (err == -ERR_NO_SOCK) {
+		    fprintf(stderr, "lookup listen?\n");
 			err = listen_tsock_lookup(pkt, tsock_ptr);
+        }
 	}
 
 	return err;

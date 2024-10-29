@@ -250,9 +250,9 @@ static void dpdk_port_init(uint16_t port, int nr_queue)
 	if (rte_eth_dev_start(port) < 0)
 		rte_panic("failed to start dpdk port %hu", port);
 
-	LOG("started port %hu %02X:%02X:%02X:%02X:%02X:%02X", port,
-	    mac.addr_bytes[0], mac.addr_bytes[1], mac.addr_bytes[2],
-	    mac.addr_bytes[3], mac.addr_bytes[4], mac.addr_bytes[5]);
+	printf("started port %hu with MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", port,
+		   mac.addr_bytes[0], mac.addr_bytes[1], mac.addr_bytes[2],
+		   mac.addr_bytes[3], mac.addr_bytes[4], mac.addr_bytes[5]);
 
 	tpa_cfg.nr_dpdk_port += 1;
 }

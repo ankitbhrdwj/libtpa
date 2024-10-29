@@ -26,8 +26,8 @@
 #define TCP_WSCALE_NONE			0
 
 /* in unit of micro seconds */
-#define TCP_RTO_MIN			(100 * 1000)	    /* data center mode */
-#define TCP_RTO_MAX			(120 * 1000 * 1000)
+#define TCP_RTO_MIN			(100 * 10000000)	    /* data center mode */
+#define TCP_RTO_MAX			(120 * 10000000)
 #define TCP_RTO_DEFAULT			TCP_RTO_MIN
 #define TCP_TIME_WAIT_DEFAULT		(60  * 1000 * 1000) /* 60s */
 #define TCP_KEEPALIVE_DEFAULT		TCP_RTO_MAX
