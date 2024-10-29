@@ -831,7 +831,6 @@ int tpa_listen_on(const char *local, uint16_t port, const struct tpa_sock_opts *
 	}
 
 	tsock->port_id = dev_port_id_get();
-	printf("port %u on port_id: %u\n", port, tsock->port_id);
 
 	return tsock->sid;
 }
@@ -991,13 +990,13 @@ int listen_tsock_lookup(struct packet *pkt, struct tcp_sock **tsock_ptr)
 
 	tsock = sock_table_lookup_lock(&listen_sock_table, &key);
 	if (!tsock) {
-		printf("no listen sock found\n");
+		fprintf(stderr, "no listen sock found\n");
 		return -ERR_NO_SOCK;
 	}
 
 	debug_assert(tsock->state == TCP_STATE_LISTEN);
 	if (!tuple_matches(tsock, pkt)) {
-		printf("tuple mismatch\n");
+		fprintf(stderr, "tuple mismatch\n");
 		return -ERR_NO_SOCK;
 	}
 

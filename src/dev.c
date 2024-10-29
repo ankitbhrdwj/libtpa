@@ -258,9 +258,8 @@ static int bonding_init(void)
 		}
 		tpa_snprintf(dev.ports[port_id].name, sizeof(dev.ports[port_id].name), "%s", slave);
 
-		printf("bonding init: port %hu: name=%s, device_id=%s\n", port_id, slave, device_id);
+		LOG("bonding init: port %hu: name=%s, device_id=%s\n", port_id, slave, device_id);
 	} while (1);
-	printf("dev.name %s\n", dev.name);
 
 	tpa_snprintf(bonding_path, sizeof(bonding_path), "/proc/net/bonding/%s", dev.name);
 	parse_bonding_proc_file(bonding_path);
