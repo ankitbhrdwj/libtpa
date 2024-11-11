@@ -108,7 +108,7 @@ struct offload_cfg {
 
 static struct offload_cfg offload_cfg = {
 	.enable_flow_mark = 1,
-	.enable_sock_offload = 0,
+	.enable_sock_offload = 1,
 	.enable_port_block_offload = 1,
 };
 
