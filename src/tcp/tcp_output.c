@@ -82,12 +82,12 @@ static inline void mbuf_set_offload(struct packet *pkt, struct eth_ip_hdr *net_h
 }
 
 static inline int calc_tcp_opt_len(struct tcp_sock *tsock, uint16_t flags,
-				   uint32_t *enabled_opts)
+				   uint32_t *enabled_opts, uint8_t opt_dscp)
 {
 	uint32_t opts = 0;
 	uint16_t len = 0;
 
-	if ((tsock->state == TCP_STATE_ESTABLISHED) & tsock->seq_enabled)
+	if (((tsock->state == TCP_STATE_ESTABLISHED) & tsock->seq_enabled) && (opt_dscp & 0x80))
 	{
 		len += TCP_OPT_CUSTOM_SPACE;
 		opts |= TCP_OPT_CUSTOM_BIT;
@@ -216,7 +216,7 @@ static inline int prepend_tcp_hdr(struct tcp_sock *tsock, struct packet *pkt,
 
 	pkt->tsock = tsock;
 
-	tcp_hdr_len = sizeof(*tcp) + calc_tcp_opt_len(tsock, tcp_flags, &opts);
+	tcp_hdr_len = sizeof(*tcp) + calc_tcp_opt_len(tsock, tcp_flags, &opts, opt_dscp);
 	hdr = (struct eth_ip_hdr *)rte_pktmbuf_prepend(m, tsock->net_hdr_len + tcp_hdr_len);
 	if (hdr == NULL)
 		return -ERR_PKT_PREPEND_HDR;
