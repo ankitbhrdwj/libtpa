@@ -1227,6 +1227,10 @@ static int process_incoming_seq(struct tpa_worker *worker, struct tcp_sock *tsoc
 		 * - RST pkt: per RFC 7323 5.2, RST seg must not be subjected
 		 *   to the PAWS check
 		 */
+        if (seq_lt(opts->ts.val, tsock->ts_recent) &&
+		    (now_in_sec(worker) - tsock->ts_recent_in_sec) < TCP_PAWS_IDLE_MAX &&
+		    !has_flag_rst(pkt))
+			return -ERR_TCP_INVALID_TS;
 		// if (seq_lt(opts->ts.val, tsock->ts_recent) && !has_flag_rst(pkt))
 		//     // (now_in_sec(worker) - tsock->ts_recent_in_sec) < TCP_PAWS_IDLE_MAX &&
 		//     // !has_flag_rst(pkt))

@@ -87,7 +87,7 @@ static inline int calc_tcp_opt_len(struct tcp_sock *tsock, uint16_t flags,
 	uint32_t opts = 0;
 	uint16_t len = 0;
 
-	if (((tsock->state == TCP_STATE_ESTABLISHED) & tsock->seq_enabled) && (opt_dscp & 0x80))
+	if ((opt_dscp & 0x80) && (tsock->state == TCP_STATE_ESTABLISHED) && tsock->seq_enabled)
 	{
 		len += TCP_OPT_CUSTOM_SPACE;
 		opts |= TCP_OPT_CUSTOM_BIT;
