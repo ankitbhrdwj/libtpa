@@ -291,8 +291,10 @@ static inline int tcp_rcv_enqueue(struct tpa_worker *worker, struct tcp_sock *ts
 		pkt->read_tsc.submit = rte_rdtsc();
 
 	tsock_update_last_ts(tsock, LAST_TS_RCV_DATA);
+    /*
 	trace_tcp_rcv_enqueue(tsock, tsock->rcv_nxt, TCP_SEG(pkt)->len,
 			      tsock->rcv_wnd, tcp_rxq_readable_count(&tsock->rxq));
+    */
 
 	return 0;
 }
@@ -368,7 +370,7 @@ static void sack_update(struct tcp_sock *tsock, uint32_t start, uint32_t len)
 	tsock->sack_blocks[0].end   = end;
 
 trace:
-	tsock_trace_sack(tsock, SACK_UPDATE, tsock->sack_blocks, tsock->nr_sack_block);
+	// tsock_trace_sack(tsock, SACK_UPDATE, tsock->sack_blocks, tsock->nr_sack_block);
 }
 
 /*
@@ -388,7 +390,7 @@ static void sack_regulate(struct tcp_sock *tsock)
 
 	if (tsock->nr_sack_block != nr_sack) {
 		tsock->nr_sack_block = nr_sack;
-		tsock_trace_sack(tsock, SACK_REGULATE, tsock->sack_blocks, tsock->nr_sack_block);
+		// tsock_trace_sack(tsock, SACK_REGULATE, tsock->sack_blocks, tsock->nr_sack_block);
 
 		debug_assert(tsock->nr_sack_block <= TCP_MAX_NR_SACK_BLOCK);
 	}
@@ -479,9 +481,11 @@ static void ooo_queue_drain(struct tpa_worker *worker, struct tcp_sock *tsock)
 		debug_assert(TAILQ_EMPTY(&tsock->rcv_ooo_queue));
 
 		vstats_add(&tsock->ooo_recover_time, recover_time);
+        /*
 		trace_tcp_ooo(tsock, OOO_RECOVERED, recover_time);
 		tsock_trace_archive(tsock->trace, "ooo-%.3fms",
 				    (double)recover_time / 1e3);
+        */
 		tsock->last_ooo_pkt = NULL;
 
 		/*
@@ -498,7 +502,7 @@ static int ooo_queue_insert(struct tcp_sock *tsock, struct packet *prev, struct 
 
 	to_cut = TCP_SEG(pkt)->seq + TCP_SEG(pkt)->len - (tsock->rcv_nxt + tsock->rcv_wnd);
 	if (to_cut > 0) {
-		trace_tcp_ooo(tsock, OOO_CUT_BEYOND_WND, to_cut);
+		// trace_tcp_ooo(tsock, OOO_CUT_BEYOND_WND, to_cut);
 		tcp_packet_cut(pkt, to_cut, CUT_TAIL);
 	}
 
@@ -506,7 +510,7 @@ static int ooo_queue_insert(struct tcp_sock *tsock, struct packet *prev, struct 
 		return -ERR_TCP_RCV_OOO_DUP;
 
 	if (TCP_SEG(pkt)->seq != tsock->rcv_nxt && tsock->nr_ooo_pkt >= tcp_cfg.rcv_ooo_limit) {
-		trace_tcp_ooo(tsock, OOO_DROP_DUE_TO_OOO_LIMIT, 0);
+		// trace_tcp_ooo(tsock, OOO_DROP_DUE_TO_OOO_LIMIT, 0);
 		return -ERR_TCP_RCV_OOO_LIMIT;
 	}
 
@@ -519,7 +523,7 @@ static int ooo_queue_insert(struct tcp_sock *tsock, struct packet *prev, struct 
 	tsock->nr_ooo_pkt += 1;
 	tsock->worker->nr_ooo_mbuf += pkt->mbuf.nb_segs;
 	tsock->last_ooo_pkt = pkt;
-	trace_tcp_ooo(tsock, OOO_QUEUED, (TCP_SEG(pkt)->len << 16) | tsock->nr_ooo_pkt);
+	// trace_tcp_ooo(tsock, OOO_QUEUED, (TCP_SEG(pkt)->len << 16) | tsock->nr_ooo_pkt);
 
 	return 0;
 }
@@ -560,7 +564,7 @@ static int tcp_rcv_data_ooo(struct tpa_worker *worker, struct tcp_sock *tsock,
 		if (TCP_SEG(pkt)->seq == TCP_SEG(prev)->seq &&
 		    TCP_SEG(pkt)->len >  TCP_SEG(prev)->len) {
 			/* this one completely overlaps the prev one; replace it */
-			trace_tcp_ooo(tsock, OOO_DROP_PREV_AND_REPLACE, TCP_SEG(prev)->len);
+			// trace_tcp_ooo(tsock, OOO_DROP_PREV_AND_REPLACE, TCP_SEG(prev)->len);
 
 			tmp = prev;
 			prev = TAILQ_PREV(prev, packet_list, node);
@@ -570,11 +574,11 @@ static int tcp_rcv_data_ooo(struct tpa_worker *worker, struct tcp_sock *tsock,
 			to_cut = TCP_SEG(prev)->seq + TCP_SEG(prev)->len - TCP_SEG(pkt)->seq;
 			if (to_cut > 0) {
 				if (to_cut >= TCP_SEG(pkt)->len) {
-					trace_tcp_ooo(tsock, OOO_DROP_CURR, TCP_SEG(prev)->seq);
+					// trace_tcp_ooo(tsock, OOO_DROP_CURR, TCP_SEG(prev)->seq);
 					return -ERR_TCP_RCV_OOO_DUP;
 				}
 
-				trace_tcp_ooo(tsock, OOO_CUT_LEFT, to_cut);
+				// trace_tcp_ooo(tsock, OOO_CUT_LEFT, to_cut);
 				tcp_packet_cut(pkt, to_cut, CUT_HEAD);
 			}
 		}
@@ -586,12 +590,12 @@ static int tcp_rcv_data_ooo(struct tpa_worker *worker, struct tcp_sock *tsock,
 			break;
 
 		if (to_cut < TCP_SEG(next)->len) {
-			trace_tcp_ooo(tsock, OOO_CUT_RIGHT, to_cut);
+			// trace_tcp_ooo(tsock, OOO_CUT_RIGHT, to_cut);
 			tcp_packet_cut(pkt, to_cut, CUT_TAIL);
 			break;
 		}
 
-		trace_tcp_ooo(tsock, OOO_DROP_NEXT, TCP_SEG(next)->seq);
+		// trace_tcp_ooo(tsock, OOO_DROP_NEXT, TCP_SEG(next)->seq);
 		WORKER_TSOCK_STATS_INC(worker, tsock, ERR_TCP_RCV_OOO_DUP);
 
 		tmp = next;
@@ -704,7 +708,7 @@ static inline void rtt_update(struct tpa_worker *worker, struct tcp_sock *tsock,
 	tsock->rto = (tsock->srtt >> 3) + RTE_MAX(tcp_cfg.tcp_rto_min, tsock->rttvar);
 	tsock->rto = RTE_MIN(tsock->rto, TCP_RTO_MAX);
 
-	trace_tcp_rtt(tsock, tsock->rtt, tsock->srtt, tsock->rttvar, tsock->rto);
+	// trace_tcp_rtt(tsock, tsock->rtt, tsock->srtt, tsock->rttvar, tsock->rto);
 }
 
 static inline void tsock_write_latency_update(struct tcp_sock *tsock, struct tx_desc *desc, uint64_t now)
@@ -722,14 +726,16 @@ static inline int ack_sent_data(struct tpa_worker *worker, struct tcp_sock *tsoc
 	uint16_t nr_acked_pkt;
 	uint64_t now = 0;
 
-	trace_tcp_snd_una(tsock, tsock->snd_una + acked_len);
+	// trace_tcp_snd_una(tsock, tsock->snd_una + acked_len);
 
 	nr_acked_pkt = 0;
 	*rtt = 0;
 	do {
 		desc = tcp_txq_peek_una(txq, nr_acked_pkt);
+        /*
 		tsock_trace_ack_sent_data(tsock, desc, acked_len,
 					  nr_acked_pkt, worker->ts_us);
+        */
 
 		/* XXX: it should be abnormal to go here */
 		debug_assert(desc != NULL);
@@ -775,7 +781,7 @@ static inline int ack_sent_data(struct tpa_worker *worker, struct tcp_sock *tsoc
 		txq->nxt = txq->una + nr_acked_pkt;
 
 	tcp_txq_update_una(txq, nr_acked_pkt);
-	trace_tcp_update_txq(tsock, tcp_txq_inflight_pkts(&tsock->txq), tcp_txq_to_send_pkts(&tsock->txq));
+	// trace_tcp_update_txq(tsock, tcp_txq_inflight_pkts(&tsock->txq), tcp_txq_to_send_pkts(&tsock->txq));
 
 	if (tcp_txq_free_count(txq))
 		tsock_event_add(tsock, TPA_EVENT_OUT);
@@ -786,7 +792,7 @@ static inline int ack_sent_data(struct tpa_worker *worker, struct tcp_sock *tsoc
 static inline void set_cwnd(struct tcp_sock *tsock, uint32_t cwnd)
 {
 	tsock->snd_cwnd = RTE_MAX(RTE_MIN(cwnd, tcp_cfg.cwnd_max), tsock->snd_mss);
-	trace_tcp_update_cwnd(tsock, tsock->snd_cwnd);
+	// trace_tcp_update_cwnd(tsock, tsock->snd_cwnd);
 }
 
 static inline void update_cwnd(struct tpa_worker *worker, struct tcp_sock *tsock, uint32_t acked)
@@ -822,7 +828,7 @@ out:
 static void leave_fast_retrans(struct tcp_sock *tsock, uint32_t cwnd, int trace_type)
 {
 	set_cwnd(tsock, cwnd);
-	tsock_trace_fast_retrans(tsock, trace_type);
+	// tsock_trace_fast_retrans(tsock, trace_type);
 
 	tsock->retrans_stage = NONE;
 	tsock->nr_dupack = 0;
@@ -845,7 +851,7 @@ static inline void handle_fast_retransmit(struct tpa_worker *worker, struct tcp_
 		set_cwnd(tsock, tsock->snd_cwnd + tsock->nr_dupack * tsock->snd_mss);
 		tsock->retrans_stage = FAST_RETRANS;
 
-		tsock_trace_fast_retrans(tsock, FAST_RETRANS_ENTERING);
+		// tsock_trace_fast_retrans(tsock, FAST_RETRANS_ENTERING);
 		tcp_reset_retrans(tsock, tsock->snd_una, tsock->txq.una);
 		tcp_fast_retrans(worker, tsock, tsock->snd_mss);
 		if (tsock->ts_ok)
@@ -923,8 +929,10 @@ static void mark_desc_sacked(struct tpa_worker *worker, struct tcp_sock *tsock,
 
 	tsock->sacked_bytes += desc->len;
 	desc->flags |= TX_DESC_FLAG_SACKED;
+    /* 
 	trace_tcp_desc_sacked(tsock, desc->seq, desc->len,
 			      worker->ts_us - desc->ts_us, desc->flags);
+    */
 }
 
 static __rte_noinline void tcp_rcv_sack(struct tpa_worker *worker,
@@ -941,7 +949,7 @@ static __rte_noinline void tcp_rcv_sack(struct tpa_worker *worker,
 	int i;
 
 	memcpy(blocks, opts->sack_blocks, nr_sack * sizeof(struct tcp_sack_block));
-	tsock_trace_sack(tsock, SACK_RCV, blocks, nr_sack);
+	// tsock_trace_sack(tsock, SACK_RCV, blocks, nr_sack);
 
 	ret = sort_sack(nr_sack, blocks);
 	if (ret < 0) {
@@ -1017,7 +1025,7 @@ static inline int tcp_rcv_ack(struct tpa_worker *worker, struct tcp_sock *tsock,
 			    TCP_SEG(pkt)->wnd == (tsock->snd_wnd >> tsock->snd_wscale) &&
 			    tsock->snd_nxt != tsock->snd_una) {
 				tsock->nr_dupack += 1;
-				trace_tcp_dupack(tsock, tsock->nr_dupack);
+				// trace_tcp_dupack(tsock, tsock->nr_dupack);
 			}
 		} else {
 			tsock->nr_dupack = 0;
@@ -1082,11 +1090,13 @@ static inline int tcp_rcv_ack(struct tpa_worker *worker, struct tcp_sock *tsock,
 			 * all bytes before RTO retransmit are acked; finish the RTO
 			 */
 			if (seq_ge(TCP_SEG(pkt)->ack, tsock->snd_recover)) {
-				uint32_t recover_time = worker->ts_us - tsock->rto_start_ts;
+				// uint32_t recover_time = worker->ts_us - tsock->rto_start_ts;
 
 				tsock->retrans_stage = NONE;
+                /*
 				tsock_trace_archive(tsock->trace, "rto-%.3fms",
 						    (double)recover_time / 1e3);
+                */
 			} else if (tsock->retrans_stage == RTO) {
 				tcp_retrans(worker, tsock);
 			}
@@ -1182,8 +1192,10 @@ static inline int tcp_rcv_fastpath(struct tpa_worker *worker,
 	if (unlikely(err))
 		return err;
 
+    /*
 	trace_tcp_ts_opt(tsock, TCP_SEG(pkt)->ts_val, TCP_SEG(pkt)->ts_ecr,
 			 tsock->ts_recent, tsock->last_ack_sent);
+    */
 	tcp_rcv_ack_fastpath(worker, tsock, pkt);
 
 	WORKER_TSOCK_STATS_ADD(worker, tsock, BYTE_RECV_FASTPATH, TCP_SEG(pkt)->len);
@@ -1217,8 +1229,10 @@ static int process_incoming_seq(struct tpa_worker *worker, struct tcp_sock *tsoc
 		return err;
 
 	if (opts->has_ts) {
+        /*
 		trace_tcp_ts_opt(tsock, TCP_SEG(pkt)->ts_val, TCP_SEG(pkt)->ts_ecr,
 				 tsock->ts_recent, tsock->last_ack_sent);
+        */
 
 		/*
 		 * besides the basic PAWS check we did at fastpath, we do
@@ -1227,10 +1241,6 @@ static int process_incoming_seq(struct tpa_worker *worker, struct tcp_sock *tsoc
 		 * - RST pkt: per RFC 7323 5.2, RST seg must not be subjected
 		 *   to the PAWS check
 		 */
-        if (seq_lt(opts->ts.val, tsock->ts_recent) &&
-		    (now_in_sec(worker) - tsock->ts_recent_in_sec) < TCP_PAWS_IDLE_MAX &&
-		    !has_flag_rst(pkt))
-			return -ERR_TCP_INVALID_TS;
 		// if (seq_lt(opts->ts.val, tsock->ts_recent) && !has_flag_rst(pkt))
 		//     // (now_in_sec(worker) - tsock->ts_recent_in_sec) < TCP_PAWS_IDLE_MAX &&
 		//     // !has_flag_rst(pkt))
@@ -1251,8 +1261,10 @@ static inline void process_tcp_opt_negotiation(struct tpa_worker *worker, struct
 	int ret;
 
 	ret = parse_tcp_opts(&opts, pkt);
+    /*
 	trace_tcp_ts_opt(tsock, TCP_SEG(pkt)->ts_val, TCP_SEG(pkt)->ts_ecr,
 			 tsock->ts_recent, tsock->last_ack_sent);
+    */
 	if (ret < 0)
 		WORKER_TSOCK_STATS_INC(worker, tsock, -ret);
 
@@ -1281,7 +1293,7 @@ static inline void tsock_established(struct tpa_worker *worker,
 				     struct packet *pkt)
 {
 	/* XXX: it's not quite right to set snd_una to pkt.ack here */
-	trace_tcp_snd_una(tsock, TCP_SEG(pkt)->ack);
+	// trace_tcp_snd_una(tsock, TCP_SEG(pkt)->ack);
 	tsock->snd_una = TCP_SEG(pkt)->ack;
 
 	if (tsock->state == TCP_STATE_SYN_SENT)
@@ -1303,7 +1315,7 @@ static inline void tsock_established(struct tpa_worker *worker,
 	tsock_rearm_timer_keepalive(tsock, worker->ts_us);
 
 	tsock_set_state(tsock, TCP_STATE_ESTABLISHED);
-	tsock_trace_established(tsock);
+	// tsock_trace_established(tsock);
 	rte_smp_wmb();
 
 	tsock_event_add(tsock, TPA_EVENT_OUT);
@@ -1390,7 +1402,7 @@ static inline void passive_tsock_init(struct tpa_worker *worker,
 	tsock->local_port  = pkt->dst_port;
 	tsock->remote_port = pkt->src_port;
 
-	tsock_trace_base_init(tsock);
+	// tsock_trace_base_init(tsock);
 
 	sock_key_init(&key, &tsock->remote_ip, ntohs(tsock->remote_port),
 		      &tsock->local_ip, ntohs(tsock->local_port));
@@ -1399,7 +1411,7 @@ static inline void passive_tsock_init(struct tpa_worker *worker,
 
 	/* refresh worker ts_us */
 	worker->ts_us = TSC_TO_US(rte_rdtsc());
-	tsock_trace_rcv_pkt(tsock, pkt, worker->ts_us);
+	// tsock_trace_rcv_pkt(tsock, pkt, worker->ts_us);
 
 	tsock->rcv_isn = TCP_SEG(pkt)->seq;
 	tsock->rcv_nxt = TCP_SEG(pkt)->seq + 1;
@@ -1549,7 +1561,7 @@ static inline int tcp_rcv_pkt(struct tpa_worker *worker, struct tcp_sock *tsock,
 	struct tcp_opts opts;
 	int err = 0;
 
-	tsock_trace_rcv_pkt(tsock, pkt, worker->ts_us);
+	// tsock_trace_rcv_pkt(tsock, pkt, worker->ts_us);
 	tsock_update_last_ts(tsock, LAST_TS_RCV_PKT);
 
 	if (unlikely(pkt->wid != worker->id && tsock->state != TCP_STATE_LISTEN))
@@ -1660,8 +1672,10 @@ static __rte_noinline void free_err_pkt(struct tpa_worker *worker,
 					struct packet *pkt, int err)
 {
 	if (err) {
+        /*
 		if (tsock)
 			trace_error(tsock, -err);
+        */
 
 		WORKER_TSOCK_STATS_INC(worker, tsock, -err);
 	}

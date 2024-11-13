@@ -93,10 +93,12 @@ static inline int calc_tcp_opt_len(struct tcp_sock *tsock, uint16_t flags,
 		opts |= TCP_OPT_CUSTOM_BIT;
 	}
 
+    /*
 	if (tsock->state == TCP_STATE_SYN_SENT ? tsock->ts_enabled : tsock->ts_ok) {
 		len += TCP_OPT_TS_SPACE;
 		opts |= TCP_OPT_TS_BIT;
 	}
+    */
 
 	if (unlikely(flags & TCP_FLAG_SYN)) {
 		len  += TCP_OPT_MSS_SPACE;
@@ -192,10 +194,12 @@ static inline void fill_opts(const struct tcp_sock *tsock, uint32_t opts, uint32
 		addr += TCP_OPT_CUSTOM_SPACE;
 	}
 
+    /*
 	if (likely(opts & TCP_OPT_TS_BIT)) {
 		fill_opt_ts(addr, us_to_tcp_ts(tsock->worker->ts_us), 0);
 		addr += TCP_OPT_TS_SPACE;
 	}
+    */
 
 	if (unlikely(opts & ~TCP_OPT_TS_BIT))
 		fill_uncommon_opts(tsock, opts, addr);
@@ -347,14 +351,14 @@ int xmit_flag_packet_with_seq(struct tpa_worker *worker, struct tcp_sock *tsock,
 	}
 
 	tsock_update_last_ts(tsock, LAST_TS_SND_PKT);
-	tsock_trace_xmit_pkt(tsock, pkt, 0);
+	// tsock_trace_xmit_pkt(tsock, pkt, 0);
 
 	return 0;
 
 err:
 	WORKER_TSOCK_STATS_INC(worker, tsock, -err);
 	if (pkt) {
-		tsock_trace_xmit_pkt(tsock, pkt, -err);
+		// tsock_trace_xmit_pkt(tsock, pkt, -err);
 		packet_free(pkt);
 	}
 
@@ -433,12 +437,12 @@ int xmit_rst_for_listen(struct tpa_worker *worker, struct tcp_sock *tsock, struc
 		goto err;
 
 	tsock_update_last_ts(tsock, LAST_TS_SND_PKT);
-	tsock_trace_xmit_pkt(tsock, reply_pkt, 0);
+	// tsock_trace_xmit_pkt(tsock, reply_pkt, 0);
 
 	return 0;
 
 err:
-	tsock_trace_xmit_pkt(tsock, reply_pkt, ret);
+	// tsock_trace_xmit_pkt(tsock, reply_pkt, ret);
 	packet_free(reply_pkt);
 	return ret;
 }
@@ -458,7 +462,7 @@ void flush_tcp_packet(struct packet *pkt, int err)
 	}
 
 	tsock_update_last_ts(tsock, LAST_TS_SND_PKT);
-	tsock_trace_xmit_pkt(pkt->tsock, pkt, err);
+	// tsock_trace_xmit_pkt(pkt->tsock, pkt, err);
 }
 
 uint32_t isn_gen(struct tpa_ip *local_ip, struct tpa_ip *remote_ip,
@@ -596,7 +600,7 @@ static inline int xmit_one_packet(struct tpa_worker *worker, struct tcp_sock *ts
 			budget = len;
 		}
 
-		trace_tcp_xmit_data(tsock, ctx->seq, budget, off, len, desc->flags);
+		// trace_tcp_xmit_data(tsock, ctx->seq, budget, off, len, desc->flags);
 		debug_assert(off < desc->len);
 
 		packet_attach_extbuf(pkt, desc->addr + off, desc->phys_addr + off, len);
@@ -649,12 +653,12 @@ static inline int xmit_one_packet(struct tpa_worker *worker, struct tcp_sock *ts
 
 	ctx->budget -= size;
 	tsock->flags &= ~TSOCK_FLAG_TCP_FLAGS_MASK;
-	tsock_trace_xmit_pkt(tsock, hdr_pkt, 0);
+	// tsock_trace_xmit_pkt(tsock, hdr_pkt, 0);
 
 	return size;
 
 error:
-	tsock_trace_xmit_pkt(tsock, hdr_pkt, err);
+	// tsock_trace_xmit_pkt(tsock, hdr_pkt, err);
 	packet_free(hdr_pkt);
 	return err;
 }
@@ -723,7 +727,7 @@ static uint32_t tcp_xmit_data(struct tpa_worker *worker, struct tcp_sock *tsock)
 
 	tsock->snd_nxt = ctx.seq;
 	tcp_txq_update_nxt(&tsock->txq, ctx.desc_off);
-	trace_tcp_update_txq(tsock, tcp_txq_inflight_pkts(&tsock->txq), tcp_txq_to_send_pkts(&tsock->txq));
+	// trace_tcp_update_txq(tsock, tcp_txq_inflight_pkts(&tsock->txq), tcp_txq_to_send_pkts(&tsock->txq));
 
 	return 0;
 }
@@ -963,8 +967,10 @@ static __rte_noinline ssize_t tsock_zwritev_slowpath(struct tcp_sock *tsock,
 			return -1;
 	}
 
+    /*
 	if (unlikely(trace_cfg.more_trace))
 		tsock_trace_zwritev(tsock, nr_iov, nr_iov, ctx->size, ctx->nr_fallback);
+    */
 
 	tsock->worker->nr_write_mbuf += ctx->nr_fallback;
 
@@ -1046,8 +1052,10 @@ ssize_t tsock_zwritev(struct tcp_sock *tsock, const struct tpa_iovec *iov, int n
 	}
 	debug_assert(ctx.nr_desc == nr_iov);
 
+    /*
 	if (unlikely(trace_cfg.more_trace))
 		tsock_trace_zwritev(tsock, nr_iov, nr_iov, ctx.size, 0);
+    */
 
 	init_write_lat_tsc(tsock, &ctx);
 	write_commit(tsock, &ctx);
@@ -1128,7 +1136,7 @@ int xmit_syn(struct tpa_worker *worker, struct tcp_sock *tsock)
 	if (tsock->state == TCP_STATE_SYN_RCVD)
 		tsock->flags |= TSOCK_FLAG_ACK_NEEDED;
 
-	tsock_trace_xmit_syn(tsock);
+	// tsock_trace_xmit_syn(tsock);
 	ret = xmit_flag_packet(worker, tsock);
 	/*
 	 * If we failed to xmit syn (due to dev txq is full),
@@ -1147,7 +1155,7 @@ int xmit_syn(struct tpa_worker *worker, struct tcp_sock *tsock)
 void tsock_set_state(struct tcp_sock *tsock, int state)
 {
 	tsock->state = state;
-	trace_tcp_set_state(tsock, state, tcp_rxq_readable_count(&tsock->rxq));
+	// trace_tcp_set_state(tsock, state, tcp_rxq_readable_count(&tsock->rxq));
 
 	if (state == TCP_STATE_TIME_WAIT || state == TCP_STATE_FIN_WAIT_2)
 		timer_start(&tsock->timer_wait, tsock->worker->ts_us, tcp_cfg.time_wait);
