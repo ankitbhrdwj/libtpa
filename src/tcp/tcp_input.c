@@ -29,10 +29,11 @@ struct iov_ctx {
 
 static inline void tsock_read_latency_update(struct tcp_sock *tsock, struct packet *pkt)
 {
-	vstats_add(&tsock->read_lat.submit, pkt->read_tsc.submit - pkt->read_tsc.start);
-	vstats_add(&tsock->read_lat.drain, pkt->read_tsc.drain - pkt->read_tsc.start);
-	vstats_add(&tsock->read_lat.complete, rte_rdtsc() - pkt->read_tsc.start);
-	vstats_add(&tsock->read_lat.last_write, rte_rdtsc() - tsock->last_ts[LAST_TS_WRITE]);
+	return;	
+	// vstats_add(&tsock->read_lat.submit, pkt->read_tsc.submit - pkt->read_tsc.start);
+	// vstats_add(&tsock->read_lat.drain, pkt->read_tsc.drain - pkt->read_tsc.start);
+	// vstats_add(&tsock->read_lat.complete, rte_rdtsc() - pkt->read_tsc.start);
+	// vstats_add(&tsock->read_lat.last_write, rte_rdtsc() - tsock->last_ts[LAST_TS_WRITE]);
 }
 
 static void iov_buf_free(void *addr, void *param)
@@ -48,8 +49,8 @@ static void iov_buf_free(void *addr, void *param)
 
 		tsock->worker->nr_in_process_mbuf -= pkt->mbuf.nb_segs;
 
-		debug_assert(pkt->mbuf.pool == generic_pkt_pool->pool[0] ||
-			     pkt->mbuf.pool == generic_pkt_pool->pool[1]);
+		// debug_assert(pkt->mbuf.pool == generic_pkt_pool->pool[0] ||
+			    //  pkt->mbuf.pool == generic_pkt_pool->pool[1]);
 		packet_free(pkt);
 	}
 }
@@ -149,7 +150,7 @@ ssize_t tsock_zreadv(struct tcp_sock *tsock, struct tpa_iovec *iov, int nr_iov)
 		return -1;
 	}
 	tcp_rxq_update_unread(rxq, nr_pkt);
-	vstats_add(&tsock->read_size, ctx.size);
+	// vstats_add(&tsock->read_size, ctx.size);
 
 	if (unlikely(tsock->rcv_wnd == 0)) {
 		tsock->flags |= TSOCK_FLAG_ACK_NEEDED;
@@ -171,7 +172,7 @@ int parse_tcp_opts(struct tcp_opts *opts, struct packet *pkt)
 	uint32_t off = 0;
 	struct tcp_opt *opt;
 	int ret = 0;
-	int i;
+	// int i;
 
 	memset(opts, 0, sizeof(*opts));
 
@@ -213,35 +214,35 @@ int parse_tcp_opts(struct tcp_opts *opts, struct packet *pkt)
 			opts->has_seq = 1;
 			break;
 
-		case TCP_OPT_TS_KIND:
-			opts->ts.val = ntohl(opt->u32[0]);
-			opts->ts.ecr = ntohl(opt->u32[1]);
-			opts->has_ts = 1;
-			pkt->flags |= PKT_FLAG_HAS_TS_OPT;
-			TCP_SEG(pkt)->ts_val = opts->ts.val;
-			TCP_SEG(pkt)->ts_ecr = opts->ts.ecr;
-			break;
+		// case TCP_OPT_TS_KIND:
+		// 	opts->ts.val = ntohl(opt->u32[0]);
+		// 	opts->ts.ecr = ntohl(opt->u32[1]);
+		// 	opts->has_ts = 1;
+		// 	pkt->flags |= PKT_FLAG_HAS_TS_OPT;
+		// 	TCP_SEG(pkt)->ts_val = opts->ts.val;
+		// 	TCP_SEG(pkt)->ts_ecr = opts->ts.ecr;
+		// 	break;
 
 		case TCP_OPT_SACK_PERM_KIND:
 			opts->has_sack_perm = 1;
 			break;
 
-		case TCP_OPT_SACK_KIND:
-			RTE_BUILD_BUG_ON(sizeof(struct tcp_sack_block) != 8);
+		// case TCP_OPT_SACK_KIND:
+		// 	RTE_BUILD_BUG_ON(sizeof(struct tcp_sack_block) != 8);
 
-			if (opt->len > TCP_OPT_SACK_LEN(TCP_MAX_NR_SACK_BLOCK))
-				return -ERR_INVALID_TCP_OPT_LEN;
+		// 	if (opt->len > TCP_OPT_SACK_LEN(TCP_MAX_NR_SACK_BLOCK))
+		// 		return -ERR_INVALID_TCP_OPT_LEN;
 
-			if ((opt->len - 2) % sizeof(struct tcp_sack_block) != 0)
-				return -ERR_INVALID_TCP_OPT_LEN;
+		// 	if ((opt->len - 2) % sizeof(struct tcp_sack_block) != 0)
+		// 		return -ERR_INVALID_TCP_OPT_LEN;
 
-			opts->nr_sack = (opt->len - 2) / sizeof(struct tcp_sack_block);
-			memcpy(opts->sack_blocks, (char *)opt + 2, opt->len - 2);
-			for (i = 0; i < opts->nr_sack; i++) {
-				opts->sack_blocks[i].start = ntohl(opts->sack_blocks[i].start);
-				opts->sack_blocks[i].end   = ntohl(opts->sack_blocks[i].end);
-			}
-			break;
+		// 	opts->nr_sack = (opt->len - 2) / sizeof(struct tcp_sack_block);
+		// 	memcpy(opts->sack_blocks, (char *)opt + 2, opt->len - 2);
+		// 	for (i = 0; i < opts->nr_sack; i++) {
+		// 		opts->sack_blocks[i].start = ntohl(opts->sack_blocks[i].start);
+		// 		opts->sack_blocks[i].end   = ntohl(opts->sack_blocks[i].end);
+		// 	}
+		// 	break;
 
 		default:
 			ret = -ERR_INVALID_TCP_OPT_TYPE;
@@ -290,11 +291,11 @@ static inline int tcp_rcv_enqueue(struct tpa_worker *worker, struct tcp_sock *ts
 	if (unlikely(pkt->flags & PKT_FLAG_MEASURE_READ_LATENCY))
 		pkt->read_tsc.submit = rte_rdtsc();
 
-	tsock_update_last_ts(tsock, LAST_TS_RCV_DATA);
-    /*
+	// tsock_update_last_ts(tsock, LAST_TS_RCV_DATA);
+  /*
 	trace_tcp_rcv_enqueue(tsock, tsock->rcv_nxt, TCP_SEG(pkt)->len,
 			      tsock->rcv_wnd, tcp_rxq_readable_count(&tsock->rxq));
-    */
+  */
 
 	return 0;
 }
@@ -353,7 +354,8 @@ static void sack_update(struct tcp_sock *tsock, uint32_t start, uint32_t len)
 			/* we only make sure the new sack go to the front */
 			SACK_SWAP(blk, &tsock->sack_blocks[0]);
 			sack_try_merge_blocks(tsock);
-			goto trace;
+			return;
+			// goto trace;
 		}
 	}
 
@@ -369,7 +371,7 @@ static void sack_update(struct tcp_sock *tsock, uint32_t start, uint32_t len)
 	tsock->sack_blocks[0].start = start;
 	tsock->sack_blocks[0].end   = end;
 
-trace:
+// trace:
 	// tsock_trace_sack(tsock, SACK_UPDATE, tsock->sack_blocks, tsock->nr_sack_block);
 }
 
@@ -392,7 +394,7 @@ static void sack_regulate(struct tcp_sock *tsock)
 		tsock->nr_sack_block = nr_sack;
 		// tsock_trace_sack(tsock, SACK_REGULATE, tsock->sack_blocks, tsock->nr_sack_block);
 
-		debug_assert(tsock->nr_sack_block <= TCP_MAX_NR_SACK_BLOCK);
+		// debug_assert(tsock->nr_sack_block <= TCP_MAX_NR_SACK_BLOCK);
 	}
 }
 
@@ -476,11 +478,11 @@ static void ooo_queue_drain(struct tpa_worker *worker, struct tcp_sock *tsock)
 	sack_regulate(tsock);
 
 	if (tsock->nr_ooo_pkt == 0) {
-		uint32_t recover_time = worker->ts_us - tsock->ooo_start_ts;
+		// uint32_t recover_time = worker->ts_us - tsock->ooo_start_ts;
 
-		debug_assert(TAILQ_EMPTY(&tsock->rcv_ooo_queue));
+		// debug_assert(TAILQ_EMPTY(&tsock->rcv_ooo_queue));
 
-		vstats_add(&tsock->ooo_recover_time, recover_time);
+		// vstats_add(&tsock->ooo_recover_time, recover_time);
         /*
 		trace_tcp_ooo(tsock, OOO_RECOVERED, recover_time);
 		tsock_trace_archive(tsock->trace, "ooo-%.3fms",
@@ -553,8 +555,8 @@ static int tcp_rcv_data_ooo(struct tpa_worker *worker, struct tcp_sock *tsock,
 	}
 
 	TAILQ_FOREACH(next, &tsock->rcv_ooo_queue, node) {
-		debug_assert(seq_ge(TCP_SEG(next)->seq, tsock->rcv_nxt) && TCP_SEG(next)->len > 0);
-		debug_assert(prev == NULL || seq_gt(TCP_SEG(next)->seq, TCP_SEG(prev)->seq));
+		// debug_assert(seq_ge(TCP_SEG(next)->seq, tsock->rcv_nxt) && TCP_SEG(next)->len > 0);
+		// debug_assert(prev == NULL || seq_gt(TCP_SEG(next)->seq, TCP_SEG(prev)->seq));
 		if (seq_gt(TCP_SEG(next)->seq, TCP_SEG(pkt)->seq))
 			break;
 		prev = next;
@@ -647,7 +649,7 @@ static inline int tcp_rcv_data(struct tpa_worker *worker, struct tcp_sock *tsock
 		to_cut = tsock->rcv_nxt - TCP_SEG(pkt)->seq;
 		if (to_cut >= TCP_SEG(pkt)->len) {
 			/* XXX: this should never happen? */
-			debug_assert(0);
+			// debug_assert(0);
 			TCP_SEG(pkt)->len = 0;
 			return 0;
 		}
@@ -713,9 +715,9 @@ static inline void rtt_update(struct tpa_worker *worker, struct tcp_sock *tsock,
 
 static inline void tsock_write_latency_update(struct tcp_sock *tsock, struct tx_desc *desc, uint64_t now)
 {
-	vstats_add(&tsock->write_lat.submit, desc->tsc_submit - desc->tsc_start);
-	vstats_add(&tsock->write_lat.xmit,   desc->tsc_xmit   - desc->tsc_start);
-	vstats_add(&tsock->write_lat.complete, now - desc->tsc_start);
+	// vstats_add(&tsock->write_lat.submit, desc->tsc_submit - desc->tsc_start);
+	// vstats_add(&tsock->write_lat.xmit,   desc->tsc_xmit   - desc->tsc_start);
+	// vstats_add(&tsock->write_lat.complete, now - desc->tsc_start);
 }
 
 static inline int ack_sent_data(struct tpa_worker *worker, struct tcp_sock *tsock,
@@ -738,9 +740,9 @@ static inline int ack_sent_data(struct tpa_worker *worker, struct tcp_sock *tsoc
         */
 
 		/* XXX: it should be abnormal to go here */
-		debug_assert(desc != NULL);
-		debug_assert(desc->len > 0);
-		debug_assert(desc->seq + tsock->partial_ack == tsock->snd_una);
+		// debug_assert(desc != NULL);
+		// debug_assert(desc->len > 0);
+		// debug_assert(desc->seq + tsock->partial_ack == tsock->snd_una);
 
 		if (tsock->partial_ack + acked_len < desc->len) {
 			/* partial ack */
@@ -776,7 +778,7 @@ static inline int ack_sent_data(struct tpa_worker *worker, struct tcp_sock *tsoc
 	 * in case new data transmited) NXT. In such case, we should reset
 	 * the txq nxt pointer here.
 	 */
-	debug_assert((int16_t)(txq->nxt - txq->una) >= 0);
+	// debug_assert((int16_t)(txq->nxt - txq->una) >= 0);
 	if ((uint16_t)(txq->nxt - txq->una) < nr_acked_pkt)
 		txq->nxt = txq->una + nr_acked_pkt;
 
@@ -1031,7 +1033,7 @@ static inline int tcp_rcv_ack(struct tpa_worker *worker, struct tcp_sock *tsock,
 			tsock->nr_dupack = 0;
 		}
 
-		debug_assert(seq_ge(TCP_SEG(pkt)->ack, tsock->snd_una));
+		// debug_assert(seq_ge(TCP_SEG(pkt)->ack, tsock->snd_una));
 		acked_len = TCP_SEG(pkt)->ack - tsock->snd_una;
 
 		/* don't count on SYN */
@@ -1124,9 +1126,9 @@ static inline void tcp_rcv_ack_fastpath(struct tpa_worker *worker,
 {
 	int acked_len;
 
-	debug_assert(tsock->state == TCP_STATE_ESTABLISHED);
-	debug_assert(seq_ge(TCP_SEG(pkt)->ack, tsock->snd_una) &&
-		     seq_le(TCP_SEG(pkt)->ack, tsock->snd_nxt));
+	// debug_assert(tsock->state == TCP_STATE_ESTABLISHED);
+	// debug_assert(seq_ge(TCP_SEG(pkt)->ack, tsock->snd_una) &&
+		    //  seq_le(TCP_SEG(pkt)->ack, tsock->snd_nxt));
 
 	acked_len = TCP_SEG(pkt)->ack - tsock->snd_una;
 	if (acked_len > 0) {
@@ -1156,6 +1158,7 @@ static inline void tcp_rcv_ack_fastpath(struct tpa_worker *worker,
 static inline void update_ts_recent(struct tpa_worker *worker, struct tcp_sock *tsock,
 				    struct packet *pkt)
 {
+	return;
 	tsock->ts_recent = TCP_SEG(pkt)->ts_val;
 	tsock->ts_recent_in_sec = now_in_sec(worker);
 }
@@ -1186,7 +1189,7 @@ static inline int tcp_rcv_fastpath(struct tpa_worker *worker,
 	if (seq_lt(TCP_SEG(pkt)->ts_val, tsock->ts_recent))
 		return 0;
 	if (seq_le(TCP_SEG(pkt)->seq, tsock->last_ack_sent))
-		update_ts_recent(worker, tsock, pkt);
+		// update_ts_recent(worker, tsock, pkt);
 
 	err = tcp_rcv_data(worker, tsock, pkt);
 	if (unlikely(err))
@@ -1241,12 +1244,18 @@ static int process_incoming_seq(struct tpa_worker *worker, struct tcp_sock *tsoc
 		 * - RST pkt: per RFC 7323 5.2, RST seg must not be subjected
 		 *   to the PAWS check
 		 */
+        /*
+        if (seq_lt(opts->ts.val, tsock->ts_recent) &&
+		    (now_in_sec(worker) - tsock->ts_recent_in_sec) < TCP_PAWS_IDLE_MAX &&
+		    !has_flag_rst(pkt))
+			return -ERR_TCP_INVALID_TS;
+        */
 		// if (seq_lt(opts->ts.val, tsock->ts_recent) && !has_flag_rst(pkt))
 		//     // (now_in_sec(worker) - tsock->ts_recent_in_sec) < TCP_PAWS_IDLE_MAX &&
 		//     // !has_flag_rst(pkt))
 		// 	return -ERR_TCP_INVALID_TS;
 
-		if (seq_le(TCP_SEG(pkt)->seq, tsock->last_ack_sent) && !has_flag_rst(pkt))
+		// if (seq_le(TCP_SEG(pkt)->seq, tsock->last_ack_sent) && !has_flag_rst(pkt))
 			update_ts_recent(worker, tsock, pkt);
 	}
 
@@ -1272,7 +1281,7 @@ static inline void process_tcp_opt_negotiation(struct tpa_worker *worker, struct
 	tsock->snd_mss = calc_snd_mss(tsock, has_ts, 1, opts.mss);
 	if (has_ts) {
 		tsock->snd_mss -= TCP_OPT_TS_SPACE;
-		update_ts_recent(worker, tsock, pkt);
+		// update_ts_recent(worker, tsock, pkt);
 		tsock->ts_ok = 1;
 	}
 
@@ -1342,7 +1351,7 @@ static __rte_noinline int tcp_rcv_rst(struct tpa_worker *worker,
 	int ret = -WARN_RST_RECV;
 	int to_close = 0;
 
-	debug_assert(has_flag_rst(pkt));
+	// debug_assert(has_flag_rst(pkt));
 
 	if (tsock->state == TCP_STATE_CLOSED)
 		return ret;
@@ -1433,7 +1442,7 @@ static inline int tsock_accept(struct tpa_worker *worker, struct tcp_sock *liste
 {
 	struct tcp_sock *tsock;
 
-	debug_assert(tsock_lookup_slowpath(worker, pkt, &tsock) != 0);
+	// debug_assert(tsock_lookup_slowpath(worker, pkt, &tsock) != 0);
 
 	tsock = sock_create(NULL, !!(pkt->flags & PKT_FLAG_IS_IPV6));
 	if (!tsock)
@@ -1562,13 +1571,14 @@ static inline int tcp_rcv_pkt(struct tpa_worker *worker, struct tcp_sock *tsock,
 	int err = 0;
 
 	// tsock_trace_rcv_pkt(tsock, pkt, worker->ts_us);
-	tsock_update_last_ts(tsock, LAST_TS_RCV_PKT);
+	// tsock_update_last_ts(tsock, LAST_TS_RCV_PKT);
 
 	if (unlikely(pkt->wid != worker->id && tsock->state != TCP_STATE_LISTEN))
 		return -WARN_STALE_PKT_WORKER_MISMATCH;
 
 	if (likely(tsock->state == TCP_STATE_ESTABLISHED &&
 		   tcp_rcv_fastpath(worker, tsock, pkt) == 1)) {
+		printf("?");
 		tsock_rearm_timer_keepalive(tsock, worker->ts_us);
 		return 0;
 	}
@@ -1671,14 +1681,14 @@ static __rte_noinline void free_err_pkt(struct tpa_worker *worker,
 					struct tcp_sock *tsock,
 					struct packet *pkt, int err)
 {
-	if (err) {
-        /*
-		if (tsock)
-			trace_error(tsock, -err);
-        */
+	// if (err) {
+  //       /*
+	// 	if (tsock)
+	// 		trace_error(tsock, -err);
+  //       */
 
-		WORKER_TSOCK_STATS_INC(worker, tsock, -err);
-	}
+	// 	WORKER_TSOCK_STATS_INC(worker, tsock, -err);
+	// }
 
 	packet_free(pkt);
 }
@@ -1687,7 +1697,7 @@ static inline void tcp_rcv_process(struct tpa_worker *worker, struct tcp_sock *t
 				   struct packet *pkt)
 {
 	int err;
-	vstats_add(&tsock->rx_merge_size, pkt->nr_read_seg);
+	// vstats_add(&tsock->rx_merge_size, pkt->nr_read_seg);
 	/* here we do count only when merge happened; therefore > 1 here */
 	if (pkt->nr_read_seg > 1)
 		WORKER_TSOCK_STATS_ADD(worker, tsock, PKT_RECV_MERGE, pkt->nr_read_seg);
@@ -1819,6 +1829,7 @@ uint32_t tcp_input(struct tpa_worker *worker, uint16_t port_id)
 
 int verify_csum(struct packet *pkt)
 {
+	return 0;
 	uint16_t csum;
 
 	if (pkt->flags & PKT_FLAG_IS_IPV6) {
@@ -1843,3 +1854,4 @@ int verify_csum(struct packet *pkt)
 
 	return 0;
 }
+

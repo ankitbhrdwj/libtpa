@@ -12,7 +12,7 @@ CFLAGS += -DALLOW_EXPERIMENTAL_API
 CFLAGS += -DTPA_DEBUG -fPIC
 
 ifeq ($(NIC_TYPE),mlnx)
-CFLAGS += -DNIC_MLNX
+CFLAGS += -DNIC_MLNX -Wno-error
 endif
 
 old_version = $(shell awk '{print $$3}' $(SRC_ROOT)/include/version.h 2>/dev/null| tr -d '"')
