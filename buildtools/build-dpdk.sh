@@ -110,8 +110,8 @@ build_with_meson()
 		echo "#define RTE_LIBRTE_MEMPOOL_DEBUG 1" >> config/rte_config.h
 	fi
 
-	meson build -Dc_args="$EXTRA_CFLAGS" -Dc_link_args="$EXTRA_LDFLAGS" \
-		    -Dprefix=`pwd`/$RTE_TARGET  -Dexamples="" -Dtests=false \
+	meson build -Dc_args="$EXTRA_CFLAGS" -Dc_link_args="$EXTRA_LDFLAGS" -Db_lto=true \
+		    -Dprefix=`pwd`/$RTE_TARGET  -Dexamples="" -Dtests=false -Dplatform=native \
 		    -Ddisable_drivers=$(get_disable_driver_list)
 
 	[ "$(uname -m)" = "aarch64" ] && {

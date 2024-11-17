@@ -36,12 +36,12 @@ endif
 
 EXTRA_CFLAGS := -fPIC
 ifeq ($(BUILD_MODE),release)
-EXTRA_CFLAGS += -g -fno-omit-frame-pointer
+#EXTRA_CFLAGS += -g -fno-omit-frame-pointer
 else
 EXTRA_CFLAGS += -g3 -O0
 endif
 
-CFLAGS := -O2 $(EXTRA_CFLAGS)
+CFLAGS := -O3 $(EXTRA_CFLAGS)
 CFLAGS += -Wall -Werror -Wno-packed-not-aligned -Wno-format-truncation
 CFLAGS += -Wno-address-of-packed-member
 
