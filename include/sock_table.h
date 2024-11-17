@@ -74,31 +74,6 @@ static inline uint32_t sock_hash_idx(struct sock_key *key)
 	return hash & (SOCK_TABLE_SIZE - 1);
 }
 
-static void print_sock_key(const char * prefix, const struct sock_key *key) {
-
-    return;
-    fprintf(stderr, "%s", prefix);
-    // Convert IP from network byte order to host byte order for proper display
-    uint32_t local_ip4 = ntohl(key->local_ip.u32[3]);
-    uint32_t remote_ip4 = ntohl(key->remote_ip.u32[3]);
-
-    // Print IPs in dotted decimal format
-    fprintf(stderr, "Local IP: %u.%u.%u.%u\t", 
-            (local_ip4 >> 24) & 0xFF, 
-            (local_ip4 >> 16) & 0xFF, 
-            (local_ip4 >> 8) & 0xFF, 
-            local_ip4 & 0xFF);
-    
-    fprintf(stderr, "Remote IP: %u.%u.%u.%u\t", 
-            (remote_ip4 >> 24) & 0xFF, 
-            (remote_ip4 >> 16) & 0xFF, 
-            (remote_ip4 >> 8) & 0xFF, 
-            remote_ip4 & 0xFF);
-
-    // Print ports
-    fprintf(stderr, "Local Port: %u\t", (key->local_port));
-    fprintf(stderr, "Remote Port: %u\n\n", (key->remote_port));
-}
 
 static inline struct tcp_sock *sock_table_lookup(struct sock_table *table, struct sock_key *key)
 {
@@ -106,8 +81,6 @@ static inline struct tcp_sock *sock_table_lookup(struct sock_table *table, struc
 	struct sock_entry *entry;
 
 	TAILQ_FOREACH(entry, list, node) {
-		print_sock_key("INPUT ", key);
-		print_sock_key("TABLE ", &entry->key);
 		if (sock_key_equal(&entry->key, key))
 			return entry->tsock;
 	}

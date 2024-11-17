@@ -13,3 +13,4 @@ rdma-core/
 third
 target/
 Cargo.lock
+*.cfg

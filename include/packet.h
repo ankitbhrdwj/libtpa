@@ -320,74 +320,6 @@ static inline void packet_chain(struct packet *head, struct packet *pkt)
 int parse_tcp_opts(struct tcp_opts *opts, struct packet *pkt);
 int verify_csum(struct packet *pkt);
 
-/*
-#define ETHERNET_HEADER_LEN 14
-#define IPV4_HEADER_LEN 20
-#define TCP_HEADER_LEN 20
-
-static void print_ethernet_header(const uint8_t *packet) {
-    printf("Ethernet Header:\n");
-    printf("Destination MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
-           packet[0], packet[1], packet[2], packet[3], packet[4], packet[5]);
-    printf("Source MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
-           packet[6], packet[7], packet[8], packet[9], packet[10], packet[11]);
-    printf("EtherType: 0x%02x%02x\n", packet[12], packet[13]);
-}
-
-static void print_ipv4_header(const uint8_t *packet) {
-    printf("\nIPv4 Header:\n");
-    printf("Version: %d\n", (packet[0] >> 4));
-    printf("Header Length: %d bytes\n", (packet[0] & 0x0F) * 4);
-    printf("Total Length: %d\n", (packet[2] << 8) | packet[3]);
-    printf("Protocol: %d\n", packet[9]);
-    printf("Source IP: %d.%d.%d.%d\n",
-           packet[12], packet[13], packet[14], packet[15]);
-    printf("Destination IP: %d.%d.%d.%d\n",
-           packet[16], packet[17], packet[18], packet[19]);
-}
-
-static inline void print_tcp_flags(uint8_t flags) {
-    printf("\nTCP Flags:\n");
-    if (flags & 0x01) printf("FIN ");
-    if (flags & 0x02) printf("SYN ");
-    if (flags & 0x04) printf("RST ");
-    if (flags & 0x08) printf("PSH ");
-    if (flags & 0x10) printf("ACK ");
-    if (flags & 0x20) printf("URG ");
-    printf("\n");
-}
-
-static void print_tcp_header(const uint8_t *packet) {
-    printf("\nTCP Header:\n");
-    printf("Source Port: %d\n", (packet[0] << 8) | packet[1]);
-    printf("Destination Port: %d\n", (packet[2] << 8) | packet[3]);
-    printf("Sequence Number: %u\n", (packet[4] << 24) | (packet[5] << 16) | (packet[6] << 8) | packet[7]);
-    printf("Acknowledgment Number: %u\n", (packet[8] << 24) | (packet[9] << 16) | (packet[10] << 8) | packet[11]);
-    printf("Data Offset: %d bytes\n", (packet[12] >> 4) * 4);
-
-    uint8_t flags = packet[13] & 0x3F;  // TCP flags are the lower 6 bits of the 13th byte
-    print_tcp_flags(flags);
-}
-
-static void forward_packet(const uint8_t *packet, size_t length) {
-    if (length < ETHERNET_HEADER_LEN + IPV4_HEADER_LEN + TCP_HEADER_LEN) {
-        printf("Packet is too short to process!\n");
-        return;
-    }
-    
-    // Process Ethernet Header
-    print_ethernet_header(packet);
-    
-    // Process IPv4 Header
-    print_ipv4_header(packet + ETHERNET_HEADER_LEN);
-    
-    // Process TCP Header
-    print_tcp_header(packet + ETHERNET_HEADER_LEN + IPV4_HEADER_LEN);
-    
-    // Additional forwarding logic or packet processing can be added here
-    printf("\nPacket forwarding...\n");
-}*/
-
 #define IP4_HDR_LEN(ip)		((ip->version_ihl & 0xf) << 2)
 /*
  * XXX: we probably could make some spaces to store bad pkts (for
@@ -405,7 +337,6 @@ static inline int parse_tcp_packet(struct packet *pkt)
 	debug_assert(pkt->mbuf.data_off <= 128);
 	pkt->l2_off = pkt->mbuf.data_off;
 	pkt->l3_off = pkt->l2_off + sizeof(struct rte_ether_hdr);
-	//forward_packet(rte_pktmbuf_mtod(m, uint8_t *), m->pkt_len);
 
 	if ((m->packet_type & (RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_TCP)) ==
 			      (RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_TCP)) {
@@ -434,7 +365,7 @@ static inline int parse_tcp_packet(struct packet *pkt)
 	}
 
 	if ((m->ol_flags & csum_flags) != csum_flags) {
-		err = 0; //verify_csum(pkt);
+		err = 0; // verify_csum(pkt);
 		if (err)
 			return err;
 	}
