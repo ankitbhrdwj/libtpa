@@ -989,12 +989,16 @@ int listen_tsock_lookup(struct packet *pkt, struct tcp_sock **tsock_ptr)
 	key.local_port = ntohs(pkt->dst_port);
 
 	tsock = sock_table_lookup_lock(&listen_sock_table, &key);
-	if (!tsock)
+	if (!tsock) {
+		fprintf(stderr, "no listen sock found\n");
 		return -ERR_NO_SOCK;
+	}
 
 	debug_assert(tsock->state == TCP_STATE_LISTEN);
-	if (!tuple_matches(tsock, pkt))
+	if (!tuple_matches(tsock, pkt)) {
+		fprintf(stderr, "tuple mismatch\n");
 		return -ERR_NO_SOCK;
+	}
 
 	*tsock_ptr = tsock;
 

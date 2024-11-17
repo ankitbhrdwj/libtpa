@@ -7,6 +7,7 @@
 #define _SOCK_TABLE_H_
 
 #include <stdint.h>
+#include <stdio.h>
 #include <sys/queue.h>
 
 #include <rte_spinlock.h>
@@ -72,6 +73,7 @@ static inline uint32_t sock_hash_idx(struct sock_key *key)
 	RTE_BUILD_BUG_ON((SOCK_TABLE_SIZE & (SOCK_TABLE_SIZE - 1)) != 0);
 	return hash & (SOCK_TABLE_SIZE - 1);
 }
+
 
 static inline struct tcp_sock *sock_table_lookup(struct sock_table *table, struct sock_key *key)
 {

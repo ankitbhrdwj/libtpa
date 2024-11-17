@@ -1,4 +1,5 @@
 *.swp
+.vscode/
 GPATH
 GRTAGS
 GTAGS
@@ -12,3 +13,4 @@ rdma-core/
 third
 target/
 Cargo.lock
+*.cfg

@@ -136,7 +136,6 @@ static inline char *tsock_trace_name(struct tsock_trace *trace, const char *mark
 #ifndef TRACE_TOOL
 
 /* we now depend on sock trace heavily on debug */
-#define ENABLE_TRACE
 
 #define TSOCK_TRACE_PROLOG(tsock, nr_record)		do {	\
 	struct tsock_trace *trace = tsock->trace;		\

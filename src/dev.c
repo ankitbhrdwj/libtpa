@@ -258,7 +258,6 @@ static int bonding_init(void)
 		}
 		tpa_snprintf(dev.ports[port_id].name, sizeof(dev.ports[port_id].name), "%s", slave);
 
-		LOG("bonding init: port %hu: name=%s, device_id=%s", port_id, slave, device_id);
 	} while (1);
 
 	tpa_snprintf(bonding_path, sizeof(bonding_path), "/proc/net/bonding/%s", dev.name);
@@ -335,7 +334,8 @@ int dev_port_init(void)
 		    i, dev.ports[i].device_id, nic_spec->name);
 	}
 
-	if (dev.nr_port == 2)
+	// TODO: Revert it back to 2.
+	if (dev.nr_port > MAX_PORT_NR)
 		return bonding_init();
 
 	return 0;

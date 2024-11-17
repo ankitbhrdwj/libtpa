@@ -365,7 +365,7 @@ static inline int parse_tcp_packet(struct packet *pkt)
 	}
 
 	if ((m->ol_flags & csum_flags) != csum_flags) {
-		err = verify_csum(pkt);
+		err = 0; // verify_csum(pkt);
 		if (err)
 			return err;
 	}

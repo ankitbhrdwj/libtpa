@@ -249,6 +249,7 @@ static inline void tsock_reset_quickack(struct tcp_sock *tsock)
 	TSOCK_STATS_INC(tsock, WARN_QUICKACK_RESET);
 }
 
+
 static inline void tsock_rearm_timer_rto(struct tcp_sock *tsock, uint64_t now)
 {
 	timer_start(&tsock->timer_rto, now, tsock->rto << tsock->rto_shift);
@@ -442,7 +443,7 @@ static inline int tsock_lookup(struct tpa_worker *worker, int wid,
 			return -WARN_STALE_PKT_TUPLE_MISMATCH;
 
 		if (unlikely(tsock->state == TCP_STATE_LISTEN)) {
-			struct tcp_sock *child;
+			struct tcp_sock *child = 0;
 
 			if (tsock_lookup_slowpath(worker, pkt, &child) == 0) {
 				assert(child->state != TCP_STATE_LISTEN);
@@ -457,8 +458,9 @@ static inline int tsock_lookup(struct tpa_worker *worker, int wid,
 	err = sid;
 	if (err == -WARN_MISSING_FLOW_MARK) {
 		err = tsock_lookup_slowpath(worker, pkt, tsock_ptr);
-		if (err == -ERR_NO_SOCK)
+    if (err == -ERR_NO_SOCK) {
 			err = listen_tsock_lookup(pkt, tsock_ptr);
+    }
 	}
 
 	return err;

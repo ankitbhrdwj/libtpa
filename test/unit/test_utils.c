@@ -332,6 +332,7 @@ struct packet *ut_inject_data_packet(struct tcp_sock *tsock, uint32_t seq, int p
 struct packet *ut_make_input_pkt_chain(struct tcp_sock *tsock, int nr_pkt, int *pkt_size)
 {
 	struct packet *pkts[nr_pkt];
+	pkts[0] = NULL;
 	uint32_t off = 0;
 	int i;
 

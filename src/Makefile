@@ -9,7 +9,7 @@ endif
 CFLAGS += $(shell $(SRC_ROOT)/buildtools/dpdk-pkg-config --cflags)
 CFLAGS += -I$(SRC_ROOT)/include
 CFLAGS += -DALLOW_EXPERIMENTAL_API
-CFLAGS += -DTPA_DEBUG
+# CFLAGS += -DTPA_DEBUG
 
 ifeq ($(NIC_TYPE),mlnx)
 CFLAGS += -DNIC_MLNX

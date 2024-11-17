@@ -1219,18 +1219,6 @@ static int process_incoming_seq(struct tpa_worker *worker, struct tcp_sock *tsoc
 		trace_tcp_ts_opt(tsock, TCP_SEG(pkt)->ts_val, TCP_SEG(pkt)->ts_ecr,
 				 tsock->ts_recent, tsock->last_ack_sent);
 
-		/*
-		 * besides the basic PAWS check we did at fastpath, we do
-		 * 2 more check here:
-		 * - ts wrap
-		 * - RST pkt: per RFC 7323 5.2, RST seg must not be subjected
-		 *   to the PAWS check
-		 */
-		if (seq_lt(opts->ts.val, tsock->ts_recent) &&
-		    (now_in_sec(worker) - tsock->ts_recent_in_sec) < TCP_PAWS_IDLE_MAX &&
-		    !has_flag_rst(pkt))
-			return -ERR_TCP_INVALID_TS;
-
 		if (seq_le(TCP_SEG(pkt)->seq, tsock->last_ack_sent) && !has_flag_rst(pkt))
 			update_ts_recent(worker, tsock, pkt);
 	}
@@ -1668,7 +1656,6 @@ static inline void tcp_rcv_process(struct tpa_worker *worker, struct tcp_sock *t
 				   struct packet *pkt)
 {
 	int err;
-
 	vstats_add(&tsock->rx_merge_size, pkt->nr_read_seg);
 	/* here we do count only when merge happened; therefore > 1 here */
 	if (pkt->nr_read_seg > 1)
@@ -1751,12 +1738,14 @@ uint32_t tcp_input(struct tpa_worker *worker, uint16_t port_id)
 
 		err = parse_tcp_packet(pkt);
 		if (unlikely(err)) {
+			fprintf(stderr, "parse_tcp_packet failed\n");
 			free_err_pkt(worker, NULL, pkt, err);
 			continue;
 		}
 
 		err = tsock_lookup(worker, worker->id, pkt, &tsock);
 		if (unlikely(err)) {
+			fprintf(stderr, "tsock_lookup failed %d\n", err);
 			free_err_pkt(worker, NULL, pkt, err);
 			continue;
 		}

@@ -82,12 +82,12 @@ static inline void mbuf_set_offload(struct packet *pkt, struct eth_ip_hdr *net_h
 }
 
 static inline int calc_tcp_opt_len(struct tcp_sock *tsock, uint16_t flags,
-				   uint32_t *enabled_opts)
+				   uint32_t *enabled_opts, uint8_t opt_dscp)
 {
 	uint32_t opts = 0;
 	uint16_t len = 0;
 
-	if ((tsock->state == TCP_STATE_ESTABLISHED) & tsock->seq_enabled)
+	if ((opt_dscp & 0x80) && (tsock->state == TCP_STATE_ESTABLISHED) && tsock->seq_enabled)
 	{
 		len += TCP_OPT_CUSTOM_SPACE;
 		opts |= TCP_OPT_CUSTOM_BIT;
@@ -216,7 +216,7 @@ static inline int prepend_tcp_hdr(struct tcp_sock *tsock, struct packet *pkt,
 
 	pkt->tsock = tsock;
 
-	tcp_hdr_len = sizeof(*tcp) + calc_tcp_opt_len(tsock, tcp_flags, &opts);
+	tcp_hdr_len = sizeof(*tcp) + calc_tcp_opt_len(tsock, tcp_flags, &opts, opt_dscp);
 	hdr = (struct eth_ip_hdr *)rte_pktmbuf_prepend(m, tsock->net_hdr_len + tcp_hdr_len);
 	if (hdr == NULL)
 		return -ERR_PKT_PREPEND_HDR;
@@ -464,13 +464,16 @@ void flush_tcp_packet(struct packet *pkt, int err)
 uint32_t isn_gen(struct tpa_ip *local_ip, struct tpa_ip *remote_ip,
 		 uint16_t local_port, uint16_t remote_port)
 {
+#ifdef RAND_ISN
 	uint32_t seq;
 
-	/* we ignore local ip here as it does not change */
 	seq = rte_crc32_u64(remote_ip->u64[0] | (uint64_t)local_port,
 			    remote_ip->u64[1] | (uint64_t)remote_port);
 
 	return seq + (rte_rdtsc() >> 10);
+#else
+	return 0;
+#endif
 }
 
 int tcp_connect(struct tcp_sock *tsock)
