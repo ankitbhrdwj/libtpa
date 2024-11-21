@@ -13,6 +13,7 @@
 #include <numa.h>
 
 #include <rte_eal.h>
+#include <rte_lcore.h>
 #include <rte_malloc.h>
 
 #include "api/tpa.h"
@@ -374,6 +375,21 @@ static int get_one_memseg(const struct rte_memseg_list *msl,
 	if (!msl->external)
 		append_one_memseg(ctx, msl->base_va, len, msl->page_sz);
 
+	return 0;
+}
+
+int tpa_thread_register(void)
+{
+#ifdef NIC_MLNX
+	int err;
+	err = rte_thread_register();
+	if (err)
+	{
+		LOG_ERR("failed to register thread: %s", strerror(err));
+		return err;
+	}
+	LOG("registered thread");
+#endif
 	return 0;
 }
 
