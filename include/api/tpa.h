@@ -174,6 +174,7 @@ struct tpa_memseg {
 	uint32_t page_size;
 };
 
+int tpa_thread_register(void);
 struct tpa_memseg *tpa_memsegs_get(void);
 int tpa_extmem_register(void *virt_addr, size_t len, uint64_t *phys_addrs,
 			   int nr_page, size_t page_size);
