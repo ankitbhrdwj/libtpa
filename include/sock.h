@@ -250,7 +250,7 @@ static inline void tsock_reset_quickack(struct tcp_sock *tsock)
 }
 
 inline void print_sock_seq(const struct packet * pkt, const struct tcp_sock * tsock, int err) {
-	  // return 0;
+	  return;
 
     // Convert IP from network byte order to host byte order for proper display
     uint32_t local_ip4 = ntohl(tsock->local_ip.u32[3]);
